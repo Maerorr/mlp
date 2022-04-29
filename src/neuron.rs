@@ -24,8 +24,10 @@ impl Neuron {
     /// by summing all the inputs multiplied by the weights
     pub fn compute(&mut self) -> f64 {
         let mut sum = 0.;
-        for i in 0..self.inputs.len() {
-            sum += self.inputs[i] * self.weights[i];
+        //println!("{:?}", self.inputs.len());
+        for iter in self.inputs.iter().zip(self.weights.iter()) {
+            let (input, weight) = iter;
+            sum += input * weight;
         }
         // Calculate the output using the sigmoid function and add the bias
         sigmoid(sum + self.bias*self.weights[self.weights.len()-1])

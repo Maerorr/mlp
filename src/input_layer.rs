@@ -1,3 +1,4 @@
+
 pub struct InputLayer {
     values: Vec<f64>,
 }
