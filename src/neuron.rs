@@ -1,23 +1,33 @@
-pub struct neuron {
+use crate::commons::sigmoid;
+
+pub struct Neuron {
     inputs: Vec<f64>,
     weights: Vec<f64>,
-    output: f64,
+    bias: f64,
 }
 
-impl neuron {
-    pub fn new(inputs: Vec<f64>, weights: Vec<f64>) -> neuron {
-        neuron {
-            inputs: inputs,
+impl Neuron {
+    /// NOTE: last element of weights is the bias weight
+    pub fn new(weights: Vec<f64>, bias: f64) -> Neuron {
+        Neuron {
+            inputs: Vec::new(),
             weights: weights,
-            output: 0.,
+            bias: bias,
         }
     }
 
-    pub fn compute(&mut self) {
+    pub fn set_inputs(&mut self, inputs: Vec<f64>) {
+        self.inputs = inputs;
+    }
+
+    /// Calculate the output of the neuron
+    /// by summing all the inputs multiplied by the weights
+    pub fn compute(&mut self) -> f64 {
         let mut sum = 0.;
         for i in 0..self.inputs.len() {
             sum += self.inputs[i] * self.weights[i];
         }
-        self.output = sigmoid(sum);
+        // Calculate the output using the sigmoid function and add the bias
+        sigmoid(sum + self.bias*self.weights[self.weights.len()-1])
     }
 }

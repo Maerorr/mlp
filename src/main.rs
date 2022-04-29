@@ -1,6 +1,9 @@
 use commons::*;
 
 mod commons;
+mod neuron;
+mod hidden_layer;
+mod input_layer;
 
 struct Parameters {
     in_neurons: usize,
