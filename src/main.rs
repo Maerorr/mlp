@@ -13,7 +13,11 @@ struct Parameters {
 }
 
 fn main() {
-    let mut network = Network::new(vec![1., 1., 0., 0.], 5, 1, 0.5);
-    let output = network.simple_feedforward();
-    println!("{:?}", output);
+    let mut network = Network::new(vec![1., 10., 2., 5.], 10, 5, 2, 0.5);
+    print!("{:?}", network.simple_feedforward());
+    let expected: Vec<f64> = vec![1., 2.];
+    network.train(expected.to_vec(), 0.9, 0.9);
+
+    println!("{:?}", network.simple_feedforward());
+    //network.debug_print();
 }

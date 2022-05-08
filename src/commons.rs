@@ -17,5 +17,15 @@ pub fn sigmoid(x: f64) -> f64 {
 }
 
 pub fn der_sigmoid(x: f64) -> f64 {
-    E.powf(-x)/(1. + E.powf(-x)).powf(2.)
+    // E.powf(-x)/(1. + E.powf(-x)).powf(2.)
+    // this is also equal to:
+    sigmoid(x) * (1. - sigmoid(x))
+}
+
+pub fn error(guess: &Vec<f64>, expected: &Vec<f64>) -> Vec<f64> {
+    let mut error: Vec<f64> = Vec::with_capacity(guess.len());
+    for (g, e) in guess.iter().zip(expected.iter()) {
+        error.push(g - e);
+    }
+    error
 }
