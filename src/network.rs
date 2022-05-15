@@ -1,14 +1,14 @@
 use crate::{
-    commons::{der_sigmoid, error},
+    commons::{der_sigmoid, error, sigmoid},
     hidden_layer::HiddenLayer,
     input_layer::InputLayer,
 };
 
 pub struct Network {
-    input_layer: InputLayer,
-    hidden_layers: Vec<HiddenLayer>,
-    // output layer is just like a hidden layer but with less neurons
-    output_layer: HiddenLayer,
+    pub input_layer: InputLayer,
+    pub hidden_layers: Vec<HiddenLayer>,
+    // output layer is just like a hidden layer.
+    pub output_layer: HiddenLayer,
 }
 
 impl Network {
@@ -30,7 +30,9 @@ impl Network {
 
         let mut hidden_layers: Vec<HiddenLayer> = Vec::with_capacity(hidden_num);
 
-        for i in 0..hidden_num {
+        hidden_layers.push(HiddenLayer::new(hidden_size, input_layer.values.len(), bias));
+
+        for i in 1..hidden_num {
             hidden_layers.push(HiddenLayer::new(hidden_size, hidden_size, bias));
         }
 
@@ -50,15 +52,15 @@ impl Network {
         for (i, hidden) in self.hidden_layers.iter_mut().enumerate() {
             if i == 0 {
                 // if this is the first iteration, get inputs from the input layer
-                hidden.compute(self.input_layer.get_inputs());
+                hidden.compute(&self.input_layer.values);
             } else {
-                hidden.compute(prev_out);
+                hidden.compute(&prev_out);
             }
-            prev_out = hidden.get_output();
+            prev_out = hidden.outputs.clone();
         }
         self.output_layer
-            .compute(self.hidden_layers[self.hidden_layers.len() - 1].get_output());
-        self.output_layer.get_output()
+            .compute(&self.hidden_layers[self.hidden_layers.len() - 1].outputs);
+        self.output_layer.outputs.clone()
     }
 
     /// Train the network with the given inputs and expected outputs.
@@ -66,141 +68,120 @@ impl Network {
     /// * `expected`: expected outputs for the network
     /// * `learning_rate`: learning rate for the network
     /// * `alpha` : alpha value for the network
-    pub fn train(&mut self, expected: Vec<f64>, learning_rate: f64, alpha: f64) {
-        for _ in 0..100 {
-            let guess = self.simple_feedforward();
+    pub fn train(&mut self, training_data: (Vec<Vec<f64>>, Vec<Vec<f64>>) , learning_rate: f64, alpha: f64) {
+        let (inputs, expected) = training_data;
+        // train x times
+        for _ in 0..5 {
+            // for each input/expected combo
+            for (input, expect) in inputs.iter().zip(expected.iter()) {
+                //println!("Training for input: {} with expected: {}", input[0], expect[0]);
+                // train 10 times
+                for _ in 0..1 {
+                    self.input_layer.values = input.clone();
+                    let guess = self.simple_feedforward();
+                    print!("Guess for input {:?} ->  {:?}\n",&input, guess);
 
-            let output_error = error(&guess, &expected);
+                    let output_error = error(&expect, &guess);
+                    //println!("Error: for input {:?} -> {:?}", c, output_error);
 
-            // gradient descent vector
-            let mut gradient_weights: Vec<f64> = Vec::new();
-            let mut gradient_bias: Vec<f64> = Vec::new();
+                    // gradient descent vector
+                    let mut output_weight_gradient: Vec<f64> = Vec::new();
 
-            // derivative of a sum of the errors with respect to the output of the neuron
-            let cost_out_layer = output_error.iter().sum::<f64>() * 2.;
-            print!("{},  ", cost_out_layer);
 
-            // compute the gradient of the output layer
-            // the gradient consists of:
-            // 1. derivative of the cost function with respect to the weight of this neuron
-            // 2. derivative of the cost function with respect to the bias of this neuron
-            // repeat for all the neurons in the output layer
-            for (i, neuron) in self.output_layer.get_neurons().iter_mut().enumerate() {
-                for (j, input) in neuron.get_inputs().iter().enumerate() {
-                    // derivate of cost function with respect to the weight of the neuron
-                    //
-                    // 2. * (guess[i] - output_error[i]) is a derivative of the cost function with respect to the output of this neuron
-                    //
-                    // der_sigmoid(neuron.single_input_weighted(j)) is a derivative of the output of this neuron (sigmoid function)
-                    // with respect to the weighed j'th input of this neuron with bias
-                    //
-                    // input is a clean j'th input of that neuron which is a derivative of weighed j'th input of this neuron with bias
-                    // with respect to the weight of this neuron
-
-                    gradient_weights.push(
-                        learning_rate
-                            * 2.
-                            * (cost_out_layer)
-                            * der_sigmoid(neuron.single_input_weighted(j))
-                            * input,
-                    );
-
-                    // derivate of cost function with respect to the bias of the neuron
-                    //
-                    // 2. * (guess[i] - output_error[i]) is a derivative of the cost function with respect to the output of this neuron
-                    //
-                    // der_sigmoid(neuron.single_input_weighted(j)) is a derivative of the output of this neuron (sigmoid function)
-                    // with respect to the weighed j'th input of this neuron with bias
-                    //
-                    // 1 is a derivative of weighed j'th input of this neuron with bias with respect to the bias of this neuron
-
-                    gradient_bias.push(
-                        learning_rate
-                            * 2.
-                            * (cost_out_layer)
-                            * der_sigmoid(neuron.single_input_weighted(j)),
-                    );
-                }
-            }
-
-            let mut change_weights: Vec<Vec<f64>> = Vec::new();
-            let mut change_bias: Vec<Vec<f64>> = Vec::new();
-            // change the weights and biases of the output layer
-            for (i,neuron) in self.output_layer.get_neurons().iter_mut().enumerate() {
-                let mut weights: Vec<f64> = neuron.get_weights().to_vec();
-                let mut bias: Vec<f64> = neuron.get_biases().to_vec();
-                for k in 0..change_weights.len()
-                {
-                    weights[k] -= alpha * (gradient_weights
-                        [k + i * self.output_layer.get_neurons().len()]);
-                    bias[k] -= alpha * (gradient_bias[k + i * self.output_layer.get_neurons().len()]);
-                }
-                change_weights.push(weights);
-                change_bias.push(bias);
-            }
-
-            self.output_layer.set_weights(change_weights);
-            self.output_layer.set_biases(change_bias);
-
-            gradient_weights.clear();
-            gradient_bias.clear();
-
-            // compute the gradient of the hidden layers
-            // the same as the output layer
-            for hidden in self.hidden_layers.iter_mut() {
-                for neuron in hidden.get_neurons().iter_mut() {
-                    for (k, input) in neuron.get_inputs().iter().enumerate() {
-                        gradient_weights.push(
-                            learning_rate
-                                * 2.
-                                * (cost_out_layer)
-                                * der_sigmoid(neuron.single_input_weighted(k))
-                                * input,
-                        );
-                        gradient_bias.push(
-                            learning_rate
-                                * 2.
-                                * (cost_out_layer)
-                                * der_sigmoid(neuron.single_input_weighted(k)),
+                    // gradient of the output layer
+                    // grad[i] = -2*(Ti - Oi) * Oi * (1-Oi)
+                    // where Ti is the ith target output
+                    // and Oi is the ith output of the output layer
+                    for i in 0..self.output_layer.neurons.len() {
+                        output_weight_gradient.push(
+                            (-2.*(expect[i] - guess[i]))
+                            * der_sigmoid(guess[i])
                         );
                     }
-                }
-            }
 
-            let mut change_weights: Vec<Vec<f64>> = Vec::new();
-            let mut change_bias: Vec<Vec<f64>> = Vec::new();
-            // change the weights and biases of the hidden layers
-            for (i, hidden) in self.hidden_layers.iter_mut().enumerate() {
-                change_weights.clear();
-                change_bias.clear();
-                for (j, neuron) in hidden.get_neurons().iter_mut().enumerate() {
-                    let mut weights: Vec<f64> = neuron.get_weights().to_vec();
-                    let mut bias: Vec<f64> = neuron.get_biases().to_vec();
-                    for k in 0..weights.len()
-                    {
-                        weights[k] -= alpha * (gradient_weights
-                            [k + i * hidden.get_neurons().len() + j * neuron.get_biases().len()]);
-                        bias[k] -= alpha * (gradient_bias[k + i * hidden.get_neurons().len() + j * neuron.get_weights().len()]);
+                    // change the weights and biases of the output layer
+                    for (i,neuron) in self.output_layer.neurons.iter_mut().enumerate() {
+                        for k in 0..neuron.weights.len()
+                        {
+                            // alpha * grad[i] * z[j,i]
+                            // where z[j,i] is the sigm(wj*xj + b) of the neuron i
+                            neuron.weights[k] -=
+                            alpha *
+                            (output_weight_gradient[i]) *
+                            neuron.inputs[k];
+                        }
                     }
-                    change_weights.push(weights);
-                    change_bias.push(bias);
+
+                    let mut hidden_gradient: Vec<f64> = Vec::new();
+
+                    // compute the gradient of the hidden layers
+                    // the same as the output layer
+                    // we need to reverse them, because we're going from the last to the first layer
+                    let mut previous_hidden: HiddenLayer = HiddenLayer::new(1, 1, 1.);
+                    for (i, hidden) in self.hidden_layers.iter_mut().rev().enumerate() {
+                        if i == 0 {
+                            // this is the LAST layer which means its based on the output layer gradient
+                            for (j, neuron) in hidden.neurons.iter_mut().enumerate() {
+                                let mut grad = 0.;
+                                for (k, elem) in output_weight_gradient.iter().enumerate() {
+                                    grad +=
+                                    elem *
+                                    self.output_layer.neurons[k].weights[j];
+                                }
+                                hidden_gradient.push(
+                                    grad * neuron.compute()
+                                );
+                            }
+                            // change the weights and biases of the first layers
+                            for (j, neuron) in hidden.neurons.iter_mut().enumerate() {
+                                for (weight, input) in neuron.weights.iter_mut().zip(neuron.inputs.iter())
+                                {
+                                    *weight -= alpha * hidden_gradient[j] * input;
+                                }
+                            }
+                        } else {
+                            // for the rest of the hidden layers based on the previous layer gradient
+                            for (j, neuron) in hidden.neurons.iter_mut().enumerate() {
+                                let mut grad = 0.;
+                                for (k, elem) in hidden_gradient.iter().enumerate() {
+                                    grad +=
+                                    elem *
+                                    previous_hidden.neurons[k].weights[j];
+                                }
+                                hidden_gradient[j] = grad * neuron.compute();
+
+                            }
+                            // change the weights and biases of the first layers
+                            for (j, neuron) in hidden.neurons.iter_mut().enumerate() {
+                                for (weight, input) in neuron.weights.iter_mut().zip(neuron.inputs.iter())
+                                {
+                                    *weight -= alpha * hidden_gradient[j] * input;
+                                }
+                            }
+                        }
+                        previous_hidden = hidden.clone();
+                    }
                 }
-                hidden.set_weights(change_weights.to_vec());
-                hidden.set_biases(change_bias.to_vec());
+                //momentum -= momentum * 0.95;
+                //println!("training result: {:?}", self.simple_feedforward());
             }
         }
     }
 
+    pub fn batch_train(&mut self, training_data: (Vec<Vec<f64>>, Vec<Vec<f64>>) , learning_rate: f64, alpha: f64) {
+        todo!()
+    }
+
     pub fn debug_print(&mut self) {
         println!("output neurons");
-        for neuron in self.output_layer.get_neurons().iter() {
-            print!("({}, {}, {})", neuron.get_weights().len(), neuron.get_biases().len(), neuron.get_inputs().len());
+        for neuron in self.output_layer.neurons.iter() {
+            print!("({}, {}, {})", neuron.weights.len(), neuron.bias.len(), neuron.inputs.len());
             println!("");
         }
         println!("hidden neurons");
         for hidden in self.hidden_layers.iter_mut() {
-            for neuron in hidden.get_neurons().iter() {
-                print!("({}, {}, {})", neuron.get_weights().len(), neuron.get_biases().len(), neuron.get_inputs().len());
+            for neuron in hidden.neurons.iter() {
+                print!("({}, {}, {})", neuron.weights.len(), neuron.bias.len(), neuron.inputs.len());
                 println!("");
             }
         }

@@ -7,7 +7,7 @@ pub fn gen_weights(size: usize) -> Vec<f64> {
     let mut rng = rand::thread_rng();
     let mut weights: Vec<f64> = Vec::with_capacity(size);
      for _ in 0..size {
-        weights.push(rng.gen::<f64>() * 2. - 1.); // scale to <-1, 1>
+        weights.push(rng.gen::<f64>()- 1.); // scale to <-0.5, 0.5>
     }
     weights
 }
@@ -22,10 +22,10 @@ pub fn der_sigmoid(x: f64) -> f64 {
     sigmoid(x) * (1. - sigmoid(x))
 }
 
-pub fn error(guess: &Vec<f64>, expected: &Vec<f64>) -> Vec<f64> {
+pub fn error(expected: &Vec<f64>, guess: &Vec<f64>) -> Vec<f64> {
     let mut error: Vec<f64> = Vec::with_capacity(guess.len());
-    for (g, e) in guess.iter().zip(expected.iter()) {
-        error.push(g - e);
+    for (e, g) in guess.iter().zip(expected.iter()) {
+        error.push(e - g);
     }
     error
 }

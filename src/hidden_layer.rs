@@ -1,9 +1,12 @@
-use crate::neuron::{Neuron};
+use std::clone;
+
+use crate::neuron::{Neuron, self};
 use crate::commons::{gen_weights};
 
+#[derive(Clone)]
 pub struct HiddenLayer {
-    neurons: Vec<Neuron>,
-    outputs: Vec<f64>,
+    pub neurons: Vec<Neuron>,
+    pub outputs: Vec<f64>,
 }
 
 impl HiddenLayer {
@@ -24,35 +27,15 @@ impl HiddenLayer {
 
     /// Get inputs from the previous layer and
     /// compute outputs of all the neurons
-    pub fn compute(&mut self, inputs: Vec<f64>) {
+    pub fn compute(&mut self, inputs: &Vec<f64>) {
         self.outputs.clear();
-        // Set the inputs of each neuron
         for neuron in self.neurons.iter_mut() {
-            neuron.set_inputs(inputs.clone());
+            neuron.inputs = inputs.clone();
         }
+
         // compute outputs of all the neurons
         for neuron in self.neurons.iter_mut() {
             self.outputs.push(neuron.compute());
-        }
-    }
-
-    pub fn get_output(&self) -> Vec<f64> {
-        self.outputs.clone()
-    }
-
-    pub fn get_neurons(&self) -> Vec<Neuron> {
-        self.neurons.clone()
-    }
-
-    pub fn set_weights(&mut self, weights: Vec<Vec<f64>>) {
-        for (i, neuron) in self.neurons.iter_mut().enumerate() {
-            neuron.set_weights(weights[i].clone());
-        }
-    }
-
-    pub fn set_biases(&mut self, biases: Vec<Vec<f64>>) {
-        for (i, neuron) in self.neurons.iter_mut().enumerate() {
-            neuron.set_biases(biases[i].clone());
         }
     }
 }

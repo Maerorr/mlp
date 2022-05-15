@@ -1,6 +1,6 @@
 
 pub struct InputLayer {
-    values: Vec<f64>,
+    pub values: Vec<f64>,
 }
 
 impl InputLayer {
@@ -8,8 +8,5 @@ impl InputLayer {
         InputLayer {
             values: values,
         }
-    }
-    pub fn get_inputs(&self) -> Vec<f64> {
-        self.values.to_vec()
     }
 }
