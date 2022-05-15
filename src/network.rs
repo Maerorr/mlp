@@ -68,20 +68,20 @@ impl Network {
     /// * `expected`: expected outputs for the network
     /// * `learning_rate`: learning rate for the network
     /// * `alpha` : alpha value for the network
-    pub fn train(&mut self, training_data: (Vec<Vec<f64>>, Vec<Vec<f64>>) , learning_rate: f64, alpha: f64) {
+    pub fn train(&mut self, training_data: (Vec<Vec<f64>>, Vec<Vec<f64>>) , momentum: f64, alpha: f64) {
         let (inputs, expected) = training_data;
         // train x times
         for _ in 0..5 {
             // for each input/expected combo
             for (input, expect) in inputs.iter().zip(expected.iter()) {
                 //println!("Training for input: {} with expected: {}", input[0], expect[0]);
-                // train 10 times
-                for _ in 0..1 {
+                // train x times
+                for _ in 0..10 {
                     self.input_layer.values = input.clone();
                     let guess = self.simple_feedforward();
                     print!("Guess for input {:?} ->  {:?}\n",&input, guess);
 
-                    let output_error = error(&expect, &guess);
+                    //let output_error = error(&expect, &guess);
                     //println!("Error: for input {:?} -> {:?}", c, output_error);
 
                     // gradient descent vector
@@ -95,7 +95,7 @@ impl Network {
                     for i in 0..self.output_layer.neurons.len() {
                         output_weight_gradient.push(
                             (-2.*(expect[i] - guess[i]))
-                            * der_sigmoid(guess[i])
+                            * guess[i] * (1. - guess[i])
                         );
                     }
 
